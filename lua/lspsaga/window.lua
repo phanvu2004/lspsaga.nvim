@@ -73,13 +73,13 @@ local function make_floating_popup_options(width, height, opts)
     local lines_below = vim.fn.winheight(0) - lines_above
     new_option.anchor = ''
 
-    local pum_pos = vim.fn.pum_getpos()
-    local pum_vis = not vim.tbl_isempty(pum_pos) -- pumvisible() can be true and pum_pos() returns {}
-    if pum_vis and vim.fn.line(".") >= pum_pos.row or not pum_vis and lines_above < lines_below then
-      new_option.anchor = 'N'
+    if lines_above < lines_below then
+      new_option.anchor = new_option.anchor..'N'
+      height = math.min(lines_below, height)
       new_option.row = 1
     else
-      new_option.anchor = 'S'
+      new_option.anchor = new_option.anchor..'S'
+      height = math.min(lines_above, height)
       new_option.row = -2
     end
 
@@ -162,7 +162,7 @@ function M.create_win_with_border(content_opts,opts)
     api.nvim_win_set_option(winid, 'conceallevel', 2)
   end
 
-  api.nvim_win_set_option(winid,"winhl","Normal:LspFloatWinNormal,FloatBorder:"..highlight)
+  api.nvim_win_set_option(winid,"winhl","Normal:Normal,FloatBorder:"..highlight)
   api.nvim_win_set_option(winid,'winblend',0)
   api.nvim_win_set_option(winid, 'foldlevel', 100)
   return bufnr,winid
@@ -179,28 +179,6 @@ function M.get_max_float_width()
   local WIN_WIDTH = vim.fn.winwidth(0)
   local max_width = math.floor(WIN_WIDTH * 0.5)
   return max_width
-end
-
--- get the valid the screen_width
--- if have the file tree in left
--- use vim.o.column - file tree win width
-local function get_valid_screen_width()
-  local screen_width = vim.o.columns
-
-  if vim.fn.winnr('$') > 1 then
-    local special_win = {
-      ['NvimTree'] = true,
-      ['NerdTree'] = true,
-    }
-    local first_win_id = api.nvim_list_wins()[1]
-    local bufnr = vim.fn.winbufnr(first_win_id)
-    local buf_ft = api.nvim_buf_get_option(bufnr,'filetype')
-    if special_win[buf_ft] then
-      screen_width = screen_width - vim.fn.winwidth(first_win_id)
-    end
-    return screen_width
-  end
-  return screen_width
 end
 
 local function get_max_content_length(contents)
@@ -274,7 +252,20 @@ function M.fancy_floating_markdown(contents, opts)
 
   local width = get_max_content_length(stripped)
   -- the max width of doc float window keep has 20 pad
-  local WIN_WIDTH = get_valid_screen_width()
+  local WIN_WIDTH = vim.o.columns
+
+  if vim.fn.winnr('$') > 1 then
+    local special_win = {
+      ['NvimTree'] = true,
+      ['NerdTree'] = true,
+    }
+    local first_win_id = api.nvim_list_wins()[1]
+    local bufnr = vim.fn.winbufnr(first_win_id)
+    local buf_ft = api.nvim_buf_get_option(bufnr,'filetype')
+    if special_win[buf_ft] then
+      WIN_WIDTH = WIN_WIDTH - vim.fn.winwidth(first_win_id)
+    end
+  end
 
   local _pad = width / WIN_WIDTH
   if _pad < 1 then
