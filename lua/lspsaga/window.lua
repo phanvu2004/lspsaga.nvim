@@ -73,13 +73,13 @@ local function make_floating_popup_options(width, height, opts)
     local lines_below = vim.fn.winheight(0) - lines_above
     new_option.anchor = ''
 
-    if lines_above < lines_below then
-      new_option.anchor = new_option.anchor..'N'
-      height = math.min(lines_below, height)
+    local pum_pos = vim.fn.pum_getpos()
+    local pum_vis = not vim.tbl_isempty(pum_pos) -- pumvisible() can be true and pum_pos() returns {}
+    if pum_vis and vim.fn.line(".") >= pum_pos.row or not pum_vis and lines_above < lines_below then
+      new_option.anchor = 'N'
       new_option.row = 1
     else
-      new_option.anchor = new_option.anchor..'S'
-      height = math.min(lines_above, height)
+      new_option.anchor = 'S'
       new_option.row = -2
     end
 
@@ -100,7 +100,17 @@ end
 
 local function generate_win_opts(contents,opts)
   opts = opts or {}
-  local win_width,win_height = vim.lsp.util._make_floating_popup_size(contents,opts)
+  local win_width, win_height
+  -- _make_floating_popup_size doesn't allow the window size to be larger than
+  -- the current window. For the finder preview window, this means it won't let the
+  -- preview window be wider than the finder window. To work around this, the
+  -- no_size_override option can be set to indicate that the size shouldn't be changed
+  -- from what was given.
+  if (opts.no_size_override and opts.width and opts.height) then
+    win_width, win_height = opts.width, opts.height
+  else
+    win_width, win_height = vim.lsp.util._make_floating_popup_size(contents,opts)
+  end
   opts = make_floating_popup_options(win_width, win_height, opts)
   return opts
 end
@@ -126,7 +136,6 @@ local function open_shadow_win()
   api.nvim_win_set_option(shadow_winid,'winblend',70)
   return shadow_bufnr,shadow_winid
 end
-
 
 function M.create_win_with_border(content_opts,opts)
   vim.validate{
@@ -162,7 +171,7 @@ function M.create_win_with_border(content_opts,opts)
     api.nvim_win_set_option(winid, 'conceallevel', 2)
   end
 
-  api.nvim_win_set_option(winid,"winhl","Normal:Normal,FloatBorder:"..highlight)
+  api.nvim_win_set_option(winid,"winhl","Normal:LspFloatWinNormal,FloatBorder:"..highlight)
   api.nvim_win_set_option(winid,'winblend',0)
   api.nvim_win_set_option(winid, 'foldlevel', 100)
   return bufnr,winid
@@ -179,6 +188,28 @@ function M.get_max_float_width()
   local WIN_WIDTH = vim.fn.winwidth(0)
   local max_width = math.floor(WIN_WIDTH * 0.5)
   return max_width
+end
+
+-- get the valid the screen_width
+-- if have the file tree in left
+-- use vim.o.column - file tree win width
+local function get_valid_screen_width()
+  local screen_width = vim.o.columns
+
+  if vim.fn.winnr('$') > 1 then
+    local special_win = {
+      ['NvimTree'] = true,
+      ['NerdTree'] = true,
+    }
+    local first_win_id = api.nvim_list_wins()[1]
+    local bufnr = vim.fn.winbufnr(first_win_id)
+    local buf_ft = api.nvim_buf_get_option(bufnr,'filetype')
+    if special_win[buf_ft] then
+      screen_width = screen_width - vim.fn.winwidth(first_win_id)
+    end
+    return screen_width
+  end
+  return screen_width
 end
 
 local function get_max_content_length(contents)
@@ -252,20 +283,7 @@ function M.fancy_floating_markdown(contents, opts)
 
   local width = get_max_content_length(stripped)
   -- the max width of doc float window keep has 20 pad
-  local WIN_WIDTH = vim.o.columns
-
-  if vim.fn.winnr('$') > 1 then
-    local special_win = {
-      ['NvimTree'] = true,
-      ['NerdTree'] = true,
-    }
-    local first_win_id = api.nvim_list_wins()[1]
-    local bufnr = vim.fn.winbufnr(first_win_id)
-    local buf_ft = api.nvim_buf_get_option(bufnr,'filetype')
-    if special_win[buf_ft] then
-      WIN_WIDTH = WIN_WIDTH - vim.fn.winwidth(first_win_id)
-    end
-  end
+  local WIN_WIDTH = get_valid_screen_width()
 
   local _pad = width / WIN_WIDTH
   if _pad < 1 then
@@ -282,7 +300,7 @@ function M.fancy_floating_markdown(contents, opts)
 
   stripped = wrap.wrap_contents(stripped,width)
 
-  local wraped_index = #wrap.wrap_text(firstline,width)
+  local wrapped_index = #wrap.wrap_text(firstline,width)
 
   -- if only has one line do not insert truncate line
   if #stripped ~= 1 then
@@ -290,13 +308,13 @@ function M.fancy_floating_markdown(contents, opts)
     if stripped[1]:find('{%s$') then
       for idx,text in ipairs(stripped) do
         if text == '} ' or text == '}' then
-          wraped_index = idx
+          wrapped_index = idx
           break
         end
       end
     end
-    if wraped_index ~= #stripped then
-      table.insert(stripped,wraped_index+1,truncate_line)
+    if wrapped_index ~= #stripped then
+      table.insert(stripped,wrapped_index+1,truncate_line)
     end
   end
 
@@ -311,7 +329,7 @@ function M.fancy_floating_markdown(contents, opts)
   local height = opts.height or #stripped
   api.nvim_win_set_var(0,'lspsaga_hoverwin_data',{winid,height,height,#stripped})
 
-  api.nvim_buf_add_highlight(bufnr,-1,'LspSagaDocTruncateLine',wraped_index,0,-1)
+  api.nvim_buf_add_highlight(bufnr,-1,'LspSagaDocTruncateLine',wrapped_index,0,-1)
 
   -- Switch to the floating window to apply the syntax highlighting.
   -- This is because the syntax command doesn't accept a target.
@@ -337,7 +355,7 @@ function M.fancy_floating_markdown(contents, opts)
   -- make sure that regions between code blocks are definitely markdown.
   -- local ph = {start = 0; finish = 1;}
   for _, h in ipairs(highlights) do
-    h.finish = wraped_index
+    h.finish = wrapped_index
     -- apply_syntax_to_region('markdown', ph.finish, h.start)
     apply_syntax_to_region(h.ft, h.start, h.finish)
     -- ph = h

@@ -21,7 +21,7 @@ local function check_server_support_signaturehelp()
   if not active then print(msg) return end
   local clients = vim.lsp.buf_get_clients()
   for _,client in pairs(clients) do
-    if client.resolved_capabilities.signature_help == true then
+    if client.server_capabilities.signature_help == true then
       return true
     end
   end
@@ -133,7 +133,7 @@ local scroll_in_signature = function (direction)
   api.nvim_buf_set_var(0,'saga_signature_help_win',{swin,current_win_lnum,last_lnum,height})
 end
 
-local call_back = function(_, method, result)
+local call_back = function(_, result, ctx)
   if not (result and result.signatures and result.signatures[1]) then
 --     print('No signature help available')
     return
@@ -144,7 +144,7 @@ local call_back = function(_, method, result)
 --     print('No signature help available')
     return
   end
-  focusable_preview(method, function()
+  focusable_preview(ctx.method, function()
     return lines, util.try_trim_markdown_code_blocks(lines)
   end)
 end

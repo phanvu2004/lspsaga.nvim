@@ -19,6 +19,7 @@ highlight default LspSagaFinderSelection guifg=#89d957 guibg=NONE gui=bold
 highlight default LspFloatWinBorder guifg=black guibg=NONE
 highlight default LspSagaBorderTitle guifg=orange guibg=NONE gui=bold
 
+highlight default link LspFloatWinNormal Normal
 highlight default link TargetWord Error
 highlight default link ReferencesCount Title
 highlight default link DefinitionCount Title
@@ -29,12 +30,6 @@ highlight default ProviderTruncateLine guifg=black guibg=NONE
 highlight default SagaShadow guibg=#000000
 
 highlight default LspSagaFinderSelection guifg=#89d957 guibg=NONE gui=bold
-
-highlight default DiagnosticTruncateLine guifg=#6699cc guibg=NONE gui=bold
-highlight default link DiagnosticError Error
-highlight default link DiagnosticWarning WarningMsg
-highlight default DiagnosticInformation guifg=#6699cc guibg=NONE gui=bold
-highlight default DiagnosticHint guifg=#56b6c2 guibg=NONE gui=bold
 
 highlight default link DefinitionPreviewTitle Title
 

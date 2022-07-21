@@ -7,7 +7,7 @@ A light-weight lsp plugin based on neovim built-in lsp with highly a performant 
 * vim-plug
 ```vim
 Plug 'neovim/nvim-lspconfig'
-Plug 'glepnir/lspsaga.nvim'
+Plug 'glepnir/lspsaga.nvim', { 'branch': 'main' }
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ local saga = require 'lspsaga'
 -- warn_sign = '',
 -- hint_sign = '',
 -- infor_sign = '',
--- dianostic_header_icon = '   ',
+-- diagnostic_header_icon = '   ',
 -- code_action_icon = ' ',
 -- code_action_prompt = {
 --   enable = true,
@@ -137,7 +137,7 @@ src="https://user-images.githubusercontent.com/41671631/105969051-c7fb7700-60c2-
 nnoremap <silent>gr <cmd>lua require('lspsaga.rename').rename()<CR>
 -- or command
 nnoremap <silent>gr :Lspsaga rename<CR>
--- close rename win use <C-c> in insert mode or `q` in noremal mode or `:q`
+-- close rename win use <C-c> in insert mode or `q` in normal mode or `:q`
 ```
 <div align="center">
 <img
@@ -215,6 +215,8 @@ The available highlight groups are:
 | Group Name               | Description                                                      |
 | :----------------------- | :----------------------------------------------------------------|
 | `LspSagaFinderSelection` | Currently active entry in the finder window that gets previewed. |
+| `LspSagaLspFinderBorder` | |
+| `LspFloatWinNormal` | |
 | `LspFloatWinBorder` | |
 | `LspSagaBorderTitle` | |
 | `TargetWord` | |
@@ -226,11 +228,6 @@ The available highlight groups are:
 | `ProviderTruncateLine` | |
 | `SagaShadow` | |
 | `LspSagaFinderSelection` | |
-| `DiagnosticTruncateLine` | |
-| `DiagnosticError` | |
-| `DiagnosticWarning` | |
-| `DiagnosticInformation` | |
-| `DiagnosticHint` | |
 | `DefinitionPreviewTitle` | |
 | `LspSagaShTruncateLine` | |
 | `LspSagaDocTruncateLine` | |
@@ -246,6 +243,9 @@ The available highlight groups are:
 | `LspSagaAutoPreview` | |
 | `LspSagaDefPreviewBorder` | |
 | `LspLinesDiagBorder` | |
+| `LspSagaDiagnosticBorder` | |
+| `LspSagaDiagnosticTruncateLine` | |
+| `LspSagaDiagnosticHeader` | |
 
 # License
 
